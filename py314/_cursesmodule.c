@@ -114,6 +114,10 @@ static const char PyCursesVersion[] = "2.2";
 #define STRICT_SYSV_CURSES
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define CURSES_MODULE
 #include "py_curses.h"
 
@@ -1757,6 +1761,12 @@ _curses_window_getch_impl(PyCursesWindowObject *self, int group_right_1,
     else {
         rtn = mvwgetch(self->win, y, x);
     }
+
+    // windows-curses hack to make resizing work the same as in ncurses.  See
+    // PDCurses' documentation for resize_term().
+    if (rtn == KEY_RESIZE)
+        resize_term(0, 0);
+  
     Py_END_ALLOW_THREADS
 
     if (rtn == ERR) {
@@ -1805,6 +1815,12 @@ _curses_window_getkey_impl(PyCursesWindowObject *self, int group_right_1,
     else {
         rtn = mvwgetch(self->win, y, x);
     }
+
+    // windows-curses hack to make resizing work the same as in ncurses.  See
+    // PDCurses' documentation for resize_term().
+    if (rtn == KEY_RESIZE)
+        resize_term(0, 0);
+  
     Py_END_ALLOW_THREADS
 
     if (rtn == ERR) {
@@ -3857,7 +3873,9 @@ static PyObject *
 _curses_setupterm_impl(PyObject *module, const char *term, int fd)
 /*[clinic end generated code: output=4584e587350f2848 input=4511472766af0c12]*/
 {
+#ifndef _WIN32
     int err;
+#endif
 
     if (fd == -1) {
         PyObject* sys_stdout;
@@ -4031,7 +4049,7 @@ _curses_is_term_resized_impl(PyObject *module, int nlines, int ncols)
 {
     PyCursesStatefulInitialised(module);
 
-    return PyBool_FromLong(is_term_resized(nlines, ncols));
+    return PyBool_FromLong(is_term_resized());
 }
 #endif /* HAVE_CURSES_IS_TERM_RESIZED */
 
